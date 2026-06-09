@@ -190,6 +190,8 @@ if (i >= 325) {
           return valor;
 
         });
+        console.log("Fila:", i);
+console.log(JSON.stringify(valores));
 
         await conn.execute(sql, valores);
         if (i >= 325) {
@@ -210,14 +212,19 @@ insertados++;
 
       } catch (filaError) {
 
-        errores++;
+  console.error("ERROR FILA:", i);
 
-        console.error("================================");
-        console.error(`ERROR FILA ${i}`);
-        console.error("================================");
+  console.error(filaError);
 
-        console.error(filaError.message);
+  console.error(filaError.message);
 
+  console.error(filaError.code);
+
+  console.error(filaError.sqlMessage);
+
+  throw filaError;
+
+}
         if (filaError.code) {
           console.error("CODE:", filaError.code);
         }
