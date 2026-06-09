@@ -1,3 +1,63 @@
+const { google } = require("googleapis");
+const mysql = require("mysql2/promise");
+
+const SHEET_ID = "1DCb3DM_9DEYaD7QB4pXkrQ8mVc9i02KrNyq8x-anPRY";
+const SHEET_NAME = "CUMPLIMIENTO DIA ANTERIOR";
+
+function convertirFecha(valor) {
+
+  if (!valor) return null;
+
+  valor = valor.toString().trim();
+
+  let match = valor.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+
+  if (match) {
+    const dia = match[1].padStart(2, "0");
+    const mes = match[2].padStart(2, "0");
+    const anio = match[3];
+
+    return `${anio}-${mes}-${dia} 00:00:00`;
+  }
+
+  match = valor.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})$/
+  );
+
+  if (match) {
+    const dia = match[1].padStart(2, "0");
+    const mes = match[2].padStart(2, "0");
+    const anio = match[3];
+    const hora = match[4].padStart(2, "0");
+    const minuto = match[5];
+
+    return `${anio}-${mes}-${dia} ${hora}:${minuto}:00`;
+  }
+
+  return valor;
+}
+
+function convertirHora(valor) {
+
+  if (!valor) return null;
+
+  valor = valor.toString().trim();
+
+  let match = valor.match(/^(\d{1,2}):(\d{2})$/);
+
+  if (match) {
+    return `${match[1].padStart(2, "0")}:${match[2]}:00`;
+  }
+
+  match = valor.match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
+
+  if (match) {
+    return valor;
+  }
+
+  return valor;
+}
+
 async function main() {
 
   let conn;
@@ -72,6 +132,7 @@ async function main() {
     console.log("Conectado a MySQL");
 
     let insertados = 0;
+    let errores = 0;
 
     const columnas = headers.join(",");
     const placeholders = headers.map(() => "?").join(",");
@@ -84,11 +145,11 @@ async function main() {
 
     for (let i = 1; i < rows.length; i++) {
 
-      const fila = rows[i] || [];
-
-      console.log(`Procesando fila ${i}`);
-
       try {
+
+        const fila = rows[i];
+
+        console.log(`Procesando fila ${i}`);
 
         const valores = headers.map((columna, idx) => {
 
@@ -124,32 +185,31 @@ async function main() {
 
       } catch (filaError) {
 
+        errores++;
+
         console.error("================================");
-        console.error(`ERROR EN FILA ${i}`);
+        console.error(`ERROR FILA ${i}`);
         console.error("================================");
 
-        console.error("Mensaje:");
         console.error(filaError.message);
 
-        console.error("Code:");
-        console.error(filaError.code);
+        if (filaError.code) {
+          console.error("CODE:", filaError.code);
+        }
 
-        console.error("SQL Message:");
-        console.error(filaError.sqlMessage);
+        if (filaError.sqlMessage) {
+          console.error("SQL MESSAGE:", filaError.sqlMessage);
+        }
 
-        console.error("Fila completa:");
-        console.error(JSON.stringify(fila));
+        console.error("La carga continuará...");
 
-        console.error("Headers:");
-        console.error(JSON.stringify(headers));
-
-        throw filaError;
       }
 
     }
 
     console.log("================================");
     console.log(`Insertados: ${insertados}`);
+    console.log(`Errores: ${errores}`);
     console.log("Proceso finalizado");
     console.log("================================");
 
@@ -180,13 +240,5 @@ async function main() {
   }
 
 }
-main()
-  .then(() => {
-    console.log("Proceso completado");
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.error("Error fatal:");
-    console.error(err);
-    process.exit(1);
-  });
+
+main();
