@@ -1,0 +1,8 @@
+{
+  "name": "base-b2c-loader",
+  "version": "1.0.0",
+  "dependencies": {
+    "google-spreadsheet": "^4.1.1",
+    "mysql2": "^3.14.0"
+  }
+}
