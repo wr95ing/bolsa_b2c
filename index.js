@@ -60,6 +60,8 @@ function convertirHora(valor) {
 
 async function main() {
 
+  console.log("EJECUCION:", new Date().toISOString());
+
   let conn;
 
   try {
