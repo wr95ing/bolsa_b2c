@@ -147,9 +147,23 @@ async function main() {
 
       try {
 
-        const fila = rows[i];
+       const fila = rows[i];
 
-        console.log(`Procesando fila ${i}`);
+if (i >= 325) {
+  console.log("================================");
+  console.log(`FILA ${i}`);
+  console.log(JSON.stringify(fila));
+  console.log("================================");
+}
+
+console.log(`Procesando fila ${i}`);
+
+        
+
+if (i >= 325) {
+  console.log("DETALLE FILA:");
+  console.log(JSON.stringify(fila));
+}
 
         const valores = headers.map((columna, idx) => {
 
@@ -176,8 +190,17 @@ async function main() {
         });
 
         await conn.execute(sql, valores);
+        if (i >= 325) {
+  console.log(`INSERT OK FILA ${i}`);
+}
 
-        insertados++;
+insertados++;
+
+if (i >= 325) {
+  console.log(`INSERT OK FILA ${i}`);
+}
+
+insertados++;
 
         if (insertados % 100 === 0) {
           console.log(`Insertados: ${insertados}`);
