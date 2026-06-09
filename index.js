@@ -190,11 +190,14 @@ if (i >= 325) {
           return valor;
 
         });
-        console.log("Fila:", i);
-console.log(JSON.stringify(valores));
+       if (i >= 325) {
+  console.log("Fila:", i);
+  console.log(JSON.stringify(valores));
+}
 
-        await conn.execute(sql, valores);
-        if (i >= 325) {
+      await conn.execute(sql, valores);
+
+if (i >= 325) {
   console.log(`INSERT OK FILA ${i}`);
 }
 
@@ -210,40 +213,28 @@ insertados++;
           console.log(`Insertados: ${insertados}`);
         }
 
-      } catch (filaError) {
+    } catch (filaError) {
 
-  console.error("ERROR FILA:", i);
+  console.error("================================");
+  console.error(`ERROR FILA ${i}`);
+  console.error("================================");
 
   console.error(filaError);
 
-  console.error(filaError.message);
+  if (filaError.message) {
+    console.error("MESSAGE:", filaError.message);
+  }
 
-  console.error(filaError.code);
+  if (filaError.code) {
+    console.error("CODE:", filaError.code);
+  }
 
-  console.error(filaError.sqlMessage);
+  if (filaError.sqlMessage) {
+    console.error("SQL MESSAGE:", filaError.sqlMessage);
+  }
 
   throw filaError;
-
 }
-        if (filaError.code) {
-          console.error("CODE:", filaError.code);
-        }
-
-        if (filaError.sqlMessage) {
-          console.error("SQL MESSAGE:", filaError.sqlMessage);
-        }
-
-        console.error("La carga continuará...");
-
-      }
-
-    }
-
-    console.log("================================");
-    console.log(`Insertados: ${insertados}`);
-    console.log(`Errores: ${errores}`);
-    console.log("Proceso finalizado");
-    console.log("================================");
 
   } catch (error) {
 
