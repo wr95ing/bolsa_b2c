@@ -180,3 +180,13 @@ async function main() {
   }
 
 }
+main()
+  .then(() => {
+    console.log("Proceso completado");
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error("Error fatal:");
+    console.error(err);
+    process.exit(1);
+  });
