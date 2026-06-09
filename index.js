@@ -10,7 +10,6 @@ function convertirFecha(valor) {
 
   valor = valor.toString().trim();
 
-  // Formato: 6/6/2026
   let match = valor.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
 
   if (match) {
@@ -21,7 +20,6 @@ function convertirFecha(valor) {
     return `${anio}-${mes}-${dia} 00:00:00`;
   }
 
-  // Formato: 6/6/2026 14:35
   match = valor.match(
     /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})$/
   );
@@ -39,12 +37,35 @@ function convertirFecha(valor) {
   return valor;
 }
 
+function convertirHora(valor) {
+
+  if (!valor) return null;
+
+  valor = valor.toString().trim();
+
+  let match = valor.match(/^(\d{1,2}):(\d{2})$/);
+
+  if (match) {
+    return `${match[1].padStart(2, "0")}:${match[2]}:00`;
+  }
+
+  match = valor.match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
+
+  if (match) {
+    return valor;
+  }
+
+  return valor;
+}
+
 async function main() {
+
+  let conn;
 
   try {
 
     console.log("================================");
-    console.log("INICIANDO CARGA BASE_B2C");
+    console.log("INICIANDO CARGA_BASE_B2C");
     console.log("================================");
 
     const auth = new google.auth.GoogleAuth({
@@ -95,7 +116,12 @@ async function main() {
       "ENDTIME_T"
     ];
 
-    const conn = await mysql.createConnection({
+    const columnasHora = [
+      "HORA_INICIO_RANGO_INICIAL",
+      "HORA_INICIO_RANGO_FINAL"
+    ];
+
+    conn = await mysql.createConnection({
       host: process.env.DB_HOST,
       port: process.env.DB_PORT,
       user: process.env.DB_USER,
@@ -106,62 +132,110 @@ async function main() {
     console.log("Conectado a MySQL");
 
     let insertados = 0;
+    let errores = 0;
+
+    const columnas = headers.join(",");
+    const placeholders = headers.map(() => "?").join(",");
+
+    const sql = `
+      INSERT INTO BASE_B2C
+      (${columnas})
+      VALUES (${placeholders})
+    `;
 
     for (let i = 1; i < rows.length; i++) {
 
-      const fila = rows[i];
+      try {
 
-      const columnas = headers.join(",");
+        const fila = rows[i];
 
-      const placeholders = headers.map(() => "?").join(",");
+        console.log(`Procesando fila ${i}`);
 
-      const sql = `
-        INSERT INTO BASE_B2C
-        (${columnas})
-        VALUES (${placeholders})
-      `;
+        const valores = headers.map((columna, idx) => {
 
-      const valores = headers.map((columna, idx) => {
+          let valor = fila[idx];
 
-        let valor = fila[idx];
+          if (
+            valor === undefined ||
+            valor === null ||
+            valor === ""
+          ) {
+            return null;
+          }
 
-        if (
-          valor === undefined ||
-          valor === null ||
-          valor === ""
-        ) {
-          return null;
+          if (columnasFecha.includes(columna)) {
+            return convertirFecha(valor);
+          }
+
+          if (columnasHora.includes(columna)) {
+            return convertirHora(valor);
+          }
+
+          return valor;
+
+        });
+
+        await conn.execute(sql, valores);
+
+        insertados++;
+
+        if (insertados % 100 === 0) {
+          console.log(`Insertados: ${insertados}`);
         }
 
-        if (columnasFecha.includes(columna)) {
-          return convertirFecha(valor);
+      } catch (filaError) {
+
+        errores++;
+
+        console.error("================================");
+        console.error(`ERROR FILA ${i}`);
+        console.error("================================");
+
+        console.error(filaError.message);
+
+        if (filaError.code) {
+          console.error("CODE:", filaError.code);
         }
 
-        return valor;
+        if (filaError.sqlMessage) {
+          console.error("SQL MESSAGE:", filaError.sqlMessage);
+        }
 
-      });
+        console.error("La carga continuará...");
 
-      await conn.execute(sql, valores);
-
-      insertados++;
-
-      if (insertados % 500 === 0) {
-        console.log(`Insertados: ${insertados}`);
       }
 
     }
 
-    await conn.end();
-
-    console.log("======================");
+    console.log("================================");
     console.log(`Insertados: ${insertados}`);
+    console.log(`Errores: ${errores}`);
     console.log("Proceso finalizado");
-    console.log("======================");
+    console.log("================================");
 
   } catch (error) {
 
-    console.error("ERROR:");
+    console.error("================================");
+    console.error("ERROR GENERAL");
+    console.error("================================");
+
+    console.error(error.message);
+
+    if (error.code) {
+      console.error("CODE:", error.code);
+    }
+
+    if (error.sqlMessage) {
+      console.error("SQL MESSAGE:", error.sqlMessage);
+    }
+
     console.error(error);
+
+  } finally {
+
+    if (conn) {
+      await conn.end();
+    }
 
   }
 
