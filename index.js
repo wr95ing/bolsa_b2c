@@ -149,23 +149,9 @@ async function main() {
 
       try {
 
-       const fila = rows[i];
+        const fila = rows[i];
 
-if (i >= 325) {
-  console.log("================================");
-  console.log(`FILA ${i}`);
-  console.log(JSON.stringify(fila));
-  console.log("================================");
-}
-
-console.log(`Procesando fila ${i}`);
-
-        
-
-if (i >= 325) {
-  console.log("DETALLE FILA:");
-  console.log(JSON.stringify(fila));
-}
+        console.log(`Procesando fila ${i}`);
 
         const valores = headers.map((columna, idx) => {
 
@@ -190,51 +176,39 @@ if (i >= 325) {
           return valor;
 
         });
-       if (i >= 325) {
-  console.log("Fila:", i);
-  console.log(JSON.stringify(valores));
-}
 
-      await conn.execute(sql, valores);
+        await conn.execute(sql, valores);
 
-if (i >= 325) {
-  console.log(`INSERT OK FILA ${i}`);
-}
-
-insertados++;
-
-if (i >= 325) {
-  console.log(`INSERT OK FILA ${i}`);
-}
-
-insertados++;
+        insertados++;
 
         if (insertados % 100 === 0) {
           console.log(`Insertados: ${insertados}`);
         }
 
-    } catch (filaError) {
+      } catch (filaError) {
 
-  console.error("================================");
-  console.error(`ERROR FILA ${i}`);
-  console.error("================================");
+        console.error("================================");
+        console.error(`ERROR FILA ${i}`);
+        console.error("================================");
 
-  console.error(filaError);
+        console.error(filaError);
 
-  if (filaError.message) {
-    console.error("MESSAGE:", filaError.message);
-  }
+        if (filaError.message) {
+          console.error("MESSAGE:", filaError.message);
+        }
 
-  if (filaError.code) {
-    console.error("CODE:", filaError.code);
-  }
+        if (filaError.code) {
+          console.error("CODE:", filaError.code);
+        }
 
-  if (filaError.sqlMessage) {
-    console.error("SQL MESSAGE:", filaError.sqlMessage);
-  }
+        if (filaError.sqlMessage) {
+          console.error("SQL MESSAGE:", filaError.sqlMessage);
+        }
 
-  throw filaError;
-}
+        throw filaError;
+      }
+
+    }
 
   } catch (error) {
 
@@ -264,4 +238,10 @@ insertados++;
 
 }
 
-main();
+main().catch((err) => {
+  console.error("================================");
+  console.error("ERROR NO CONTROLADO EN main()");
+  console.error("================================");
+  console.error(err);
+  process.exit(1);
+});
