@@ -133,11 +133,28 @@ async function main() {
 
     console.log("Conectado a MySQL");
 
+    const [cols] = await conn.query(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'BASE_B2C'`,
+      [process.env.DB_NAME]
+    );
+    const tableCols = new Set(cols.map(c => c.COLUMN_NAME));
+
+    const headersExistentes = headers.filter(h => tableCols.has(h));
+    const headersIgnoradas = headers.filter(h => !tableCols.has(h));
+
+    if (headersIgnoradas.length) {
+      console.warn("Columnas del sheet ignoradas (no existen en BASE_B2C):");
+      headersIgnoradas.forEach(h => console.warn("  - " + h));
+    }
+
+    console.log(`Columnas a insertar: ${headersExistentes.length} de ${headers.length}`);
+
     let insertados = 0;
     let errores = 0;
 
-    const columnas = headers.join(",");
-    const placeholders = headers.map(() => "?").join(",");
+    const columnas = headersExistentes.join(",");
+    const placeholders = headersExistentes.map(() => "?").join(",");
 
     const sql = `
       INSERT INTO BASE_B2C
@@ -153,8 +170,9 @@ async function main() {
 
         console.log(`Procesando fila ${i}`);
 
-        const valores = headers.map((columna, idx) => {
+        const valores = headersExistentes.map((columna) => {
 
+          const idx = headers.indexOf(columna);
           let valor = fila[idx];
 
           if (
