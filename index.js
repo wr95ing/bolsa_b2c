@@ -58,6 +58,24 @@ function convertirHora(valor) {
   return valor;
 }
 
+const BATCH_SIZE = 100;
+
+async function insertBatch(conn, columnas, placeholders, batchValues) {
+  const rowPlaceholders = batchValues.map(() => `(${placeholders})`).join(",");
+  const sql = `INSERT IGNORE INTO BASE_B2C (${columnas}) VALUES ${rowPlaceholders}`;
+  const flat = batchValues.flat();
+
+  await conn.beginTransaction();
+  try {
+    const [result] = await conn.query(sql, flat);
+    await conn.commit();
+    return result.affectedRows;
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  }
+}
+
 async function main() {
 
   console.log("EJECUCION:", new Date().toISOString());
@@ -151,24 +169,17 @@ async function main() {
     console.log(`Columnas a insertar: ${headersExistentes.length} de ${headers.length}`);
 
     let insertados = 0;
-    let errores = 0;
+    let omitidos = 0;
+    let batchValues = [];
 
     const columnas = headersExistentes.join(",");
     const placeholders = headersExistentes.map(() => "?").join(",");
-
-    const sql = `
-      INSERT INTO BASE_B2C
-      (${columnas})
-      VALUES (${placeholders})
-    `;
 
     for (let i = 1; i < rows.length; i++) {
 
       try {
 
         const fila = rows[i];
-
-        console.log(`Procesando fila ${i}`);
 
         const valores = headersExistentes.map((columna) => {
 
@@ -195,38 +206,48 @@ async function main() {
 
         });
 
-        await conn.execute(sql, valores);
+        batchValues.push(valores);
 
-        insertados++;
-
-        if (insertados % 100 === 0) {
-          console.log(`Insertados: ${insertados}`);
+        if (batchValues.length >= BATCH_SIZE) {
+          try {
+            const inserted = await insertBatch(conn, columnas, placeholders, batchValues);
+            insertados += inserted;
+            omitidos += batchValues.length - inserted;
+          } catch (batchError) {
+            console.error(`ERROR en batch (última fila ${i}):`, batchError.message);
+            omitidos += batchValues.length;
+          }
+          batchValues = [];
+          console.log(`Procesadas: ${i} | Insertadas: ${insertados} | Omitidas: ${omitidos}`);
         }
 
       } catch (filaError) {
 
-        console.error("================================");
-        console.error(`ERROR FILA ${i}`);
-        console.error("================================");
+        console.error(`ERROR procesando fila ${i}:`, filaError.message);
+        omitidos++;
 
-        console.error(filaError);
-
-        if (filaError.message) {
-          console.error("MESSAGE:", filaError.message);
-        }
-
-        if (filaError.code) {
-          console.error("CODE:", filaError.code);
-        }
-
-        if (filaError.sqlMessage) {
-          console.error("SQL MESSAGE:", filaError.sqlMessage);
-        }
-
-        throw filaError;
       }
 
     }
+
+    if (batchValues.length > 0) {
+      try {
+        const inserted = await insertBatch(conn, columnas, placeholders, batchValues);
+        insertados += inserted;
+        omitidos += batchValues.length - inserted;
+      } catch (batchError) {
+        console.error(`ERROR en batch final:`, batchError.message);
+        omitidos += batchValues.length;
+      }
+      console.log(`Procesadas: ${rows.length - 1} | Insertadas: ${insertados} | Omitidas: ${omitidos}`);
+    }
+
+    console.log("================================");
+    console.log("FINALIZADO");
+    console.log(`Total procesadas: ${rows.length - 1}`);
+    console.log(`Insertadas: ${insertados}`);
+    console.log(`Omitidas (duplicadas o con error): ${omitidos}`);
+    console.log("================================");
 
   } catch (error) {
 
