@@ -62,7 +62,7 @@ const BATCH_SIZE = 100;
 
 async function insertBatch(conn, columnas, placeholders, batchValues) {
   const rowPlaceholders = batchValues.map(() => `(${placeholders})`).join(",");
-  const sql = `INSERT INTO BASE_B2C (${columnas}) VALUES ${rowPlaceholders}`;
+  const sql = `INSERT IGNORE INTO BASE_B2C (${columnas}) VALUES ${rowPlaceholders}`;
   const flat = batchValues.flat();
 
   await conn.beginTransaction();
