@@ -151,6 +151,22 @@ async function main() {
 
     console.log("Conectado a MySQL");
 
+    const [todayRows] = await conn.query(
+      `SELECT COUNT(*) AS total FROM BASE_B2C WHERE LOAD_DATE = CURDATE()`
+    );
+
+    if (todayRows[0].total > 0) {
+      const hoy = new Date().toISOString().slice(0, 10);
+      console.log("================================");
+      console.log("CARGA YA REALIZADA HOY");
+      console.log(`LOAD_DATE = ${hoy}`);
+      console.log(`Filas existentes: ${todayRows[0].total}`);
+      console.log("Se omite la ejecucion para evitar duplicados.");
+      console.log("================================");
+      await conn.end();
+      return;
+    }
+
     const [cols] = await conn.query(
       `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'BASE_B2C'`,
