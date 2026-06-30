@@ -265,6 +265,18 @@ async function main() {
     console.log(`Omitidas (duplicadas o con error): ${omitidos}`);
     console.log("================================");
 
+    console.log("================================");
+    console.log("VERIFICACION");
+    console.log(`Filas en sheet: ${rows.length - 1}`);
+    console.log(`Filas en MySQL hoy: ${insertados}`);
+    if (insertados !== rows.length - 1) {
+      console.log("ADVERTENCIA: diferencia entre sheet y MySQL");
+      console.log(`Diferencia: ${(rows.length - 1) - insertados}`);
+    } else {
+      console.log("OK: conteos coinciden");
+    }
+    console.log("================================");
+
   } catch (error) {
 
     console.error("================================");
